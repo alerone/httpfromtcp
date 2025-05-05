@@ -24,8 +24,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		return nil, err
 	}
 
-	reqParts := strings.Split(string(reqBytes), "\r\n")
-	requestLine, err := parseRequestLine(reqParts[0])
+	requestLine, err := parseRequestLine(reqBytes)
 
 	if err != nil {
 		return nil, err
