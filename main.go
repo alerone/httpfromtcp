@@ -10,10 +10,46 @@ import (
 )
 
 func main() {
-	err := readFromFileFullLines("messages.txt")
+
+	file, err := os.Open("messages.txt")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("couldn't open file: %s", err.Error())
 	}
+	ch := getLinesChannel(file)
+	for val := range ch {
+		fmt.Printf("read: %s\n", val)
+	}
+}
+
+func getLinesChannel(f io.ReadCloser) <-chan string {
+	ch := make(chan string)
+	go func() {
+		defer f.Close()
+		defer close(ch)
+		currentLine := ""
+		for {
+			buffer := make([]byte, 8, 8)
+			n, err := f.Read(buffer)
+			if err != nil {
+				if currentLine != "" {
+					ch <- currentLine
+					currentLine = ""
+				}
+				if errors.Is(err, io.EOF) {
+					break
+				}
+			}
+			str := string(buffer[:n])
+			parts := strings.Split(str, "\n")
+			for i := range len(parts) - 1 {
+				ch <- fmt.Sprintf("%s%s", currentLine, parts[i])
+				currentLine = ""
+			}
+			currentLine += parts[len(parts)-1]
+		}
+	}()
+
+	return ch
 }
 
 func readFromFile(filepath string) error {
@@ -65,7 +101,7 @@ func readFromFileFullLines(filepath string) error {
 			fmt.Printf("read: %s%s\n", currentLine, parts[i])
 			currentLine = ""
 		}
-		currentLine += parts[len(parts) - 1]
+		currentLine += parts[len(parts)-1]
 	}
 
 	return nil
