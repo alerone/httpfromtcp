@@ -58,7 +58,7 @@ func TestGoodGetLineWithPath(t *testing.T) {
 func GoodPOSTRequestWithPath(t *testing.T) {
 	reader := &chunkReader{
 		data: "POST /coffee HTTP/1.1\r\nnHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-		numBytesPerRead: 10,
+		numBytesPerRead: 50,
 	}
 	r, err := RequestFromReader(reader)
 	require.NoError(t, err)
