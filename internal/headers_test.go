@@ -14,7 +14,7 @@ func TestValidSingleHeader(t *testing.T) {
 	n, done, err := headers.Parse(data)
 	require.NoError(t, err)
 	require.NotNil(t, headers)
-	assert.Equal(t, "localhost:42069", headers["Host"])
+	assert.Equal(t, "localhost:42069", headers["host"])
 	assert.Equal(t, 23, n)
 	assert.False(t, done)
 }
@@ -34,7 +34,7 @@ func TestValidTwoHeadersWithExistingHeaders(t *testing.T) {
 	n, done, err := headers.Parse(data)
 	require.NoError(t, err)
 	require.NotNil(t, headers)
-	assert.Equal(t, "localhost:42069", headers["Host"])
+	assert.Equal(t, "localhost:42069", headers["host"])
 	assert.Equal(t, 23, n)
 	assert.False(t, done)
 
@@ -44,7 +44,7 @@ func TestValidTwoHeadersWithExistingHeaders(t *testing.T) {
 	require.NotNil(t, headers)
 	fmt.Println(len("Host: localhost:42069\r\n"))
 	fmt.Println(len("Authorization: 1dd90c72-daea-44c1-bc29-75f18fc4522b\r\n"))
-	assert.Equal(t, "1dd90c72-daea-44c1-bc29-75f18fc4522b", headers["Authorization"])
+	assert.Equal(t, "1dd90c72-daea-44c1-bc29-75f18fc4522b", headers["authorization"])
 	assert.Equal(t, 53, n)
 	assert.False(t, done)
 

@@ -9,7 +9,7 @@ import (
 
 type Headers map[string]string
 
-func NewHeaders() Headers{
+func NewHeaders() Headers {
 	return make(map[string]string)
 }
 
@@ -29,16 +29,33 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	}
 
 	key := data[:kidx]
-	val := data[kidx+1:crlIdx]
-	
+	val := data[kidx+1 : crlIdx]
+
 	if unicode.IsSpace(rune(key[len(key)-1])) {
-		return 0, false, fmt.Errorf("bad header key format: %s", string(data))
+		return 0, false, fmt.Errorf("bad header field name format: %s", string(data))
 	}
 
 	keyString := strings.TrimSpace(string(key))
 	valString := strings.TrimSpace(string(val))
 
-	h[keyString] = valString
+	if !checkFieldName(keyString) {
+		return 0, false, fmt.Errorf("bad header field name format: %s", string(keyString))
+	}
 
-	return crlIdx+2, false, nil
+	h[strings.ToLower(keyString)] = valString
+
+	return crlIdx + 2, false, nil
+}
+
+func checkFieldName(fn string) bool {
+	allowed := "!#$%&'*+-.^_`|~"
+
+	for _, r := range fn {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && 
+			!strings.ContainsAny(string(r), allowed) {
+			return false
+		}
+	}
+
+	return true
 }
