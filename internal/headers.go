@@ -42,7 +42,12 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, fmt.Errorf("bad header field name format: %s", string(keyString))
 	}
 
-	h[strings.ToLower(keyString)] = valString
+	cleanKey := strings.ToLower(keyString)
+	if _, ok := h[cleanKey]; ok {
+		h[cleanKey] += fmt.Sprintf(", %s", valString)
+	} else {
+		h[cleanKey] = valString
+	}
 
 	return crlIdx + 2, false, nil
 }

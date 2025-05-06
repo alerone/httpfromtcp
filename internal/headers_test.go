@@ -55,4 +55,46 @@ func TestValidTwoHeadersWithExistingHeaders(t *testing.T) {
 	assert.True(t, done)
 }
 
+func TestValidTwoEqualValidHeaders(t *testing.T) {
+	headers := NewHeaders()
+	headerStrings := []string {
+		"Set-Person: lane-loves-go",
+		"Set-Person: prime-loves-zig",
+		"Set-Person: tj-loves-ocaml",
+	}
+	data := make([]byte, 0)
+
+	for _, val := range headerStrings {
+		valByte := fmt.Appendf(nil, "%s\r\n", val)
+		data = append(data, valByte...)
+	}
+
+	data = append(data, []byte("\r\n")...)
+
+	n, done, err := headers.Parse(data)
+	require.NoError(t, err)
+	require.NotNil(t, headers)
+	assert.Equal(t, "lane-loves-go", headers["set-person"])
+	assert.Equal(t, len("Set-Person: lane-loves-go\r\n"), n)
+	assert.False(t, done)
+
+	copy(data, data[n:])
+
+	n, done, err = headers.Parse(data)
+	require.NoError(t, err)
+	require.NotNil(t, headers)
+	assert.Equal(t, "lane-loves-go, prime-loves-zig", headers["set-person"])
+	assert.Equal(t, len("Set-Person: prime-loves-zig\r\n"), n)
+	assert.False(t, done)
+
+	copy(data, data[n:])
+
+	n, done, err = headers.Parse(data)
+	require.NoError(t, err)
+	require.NotNil(t, headers)
+	assert.Equal(t, "lane-loves-go, prime-loves-zig, tj-loves-ocaml", headers["set-person"])
+	assert.Equal(t, len("Set-Person: tj-loves-ocaml\r\n"), n)
+	assert.False(t, done)
+}
+
 
