@@ -34,6 +34,10 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	if unicode.IsSpace(rune(key[len(key)-1])) {
 		return 0, false, fmt.Errorf("bad header field name format: %s", string(data))
 	}
+	keyParts := bytes.Fields(key)
+	if len( keyParts ) > 1 {
+		return 0, false, fmt.Errorf("bad header field name format: %s", string(data))
+	}
 
 	keyString := strings.TrimSpace(string(key))
 	valString := strings.TrimSpace(string(val))

@@ -7,10 +7,13 @@ import (
 	"io"
 	"strings"
 	"unicode"
+
+	"github.com/alerone/httpfromtcp/internal/headers"
 )
 
 const (
 	rqStateInitialized requestState = iota
+	rqStateParsingHeaders
 	rqStateDone
 	bufferSize int = 8
 )
@@ -19,11 +22,31 @@ type requestState int
 
 type Request struct {
 	RequestLine RequestLine
+	Headers     headers.Headers
 	state       requestState
 }
 
 func (r *Request) parse(data []byte) (n int, err error) {
-	if r.state == rqStateInitialized {
+	totalBytesParsed := 0
+
+	for r.state != rqStateDone {
+		n, err = r.parseSingle(data[totalBytesParsed:])
+		if err != nil {
+			return 0, err
+		}
+
+		if n == 0 {
+			return totalBytesParsed, nil
+		}
+
+		totalBytesParsed += n
+	}
+	return n, nil
+}
+
+func (r *Request) parseSingle(data []byte) (n int, err error) {
+	switch r.state {
+	case rqStateInitialized:{
 		n, rl, err := parseRequestLine(data)
 		if err != nil {
 			return 0, err
@@ -33,13 +56,24 @@ func (r *Request) parse(data []byte) (n int, err error) {
 		}
 
 		r.RequestLine = *rl
-		r.state = rqStateDone
-	} else if r.state == rqStateDone {
+		r.state = rqStateParsingHeaders
+		return n, nil
+	}
+	case rqStateParsingHeaders:{
+		n, done, err := r.Headers.Parse(data)
+		if err != nil {
+			return 0, err
+		}
+		if done {
+			r.state = rqStateDone
+		}
+		return n, nil
+	}
+	case rqStateDone:
 		return -1, fmt.Errorf("error: trying to parse data in done state")
-	} else {
+	default:
 		return -1, fmt.Errorf("error: unknown state")
 	}
-	return n, nil
 }
 
 type RequestLine struct {
@@ -51,10 +85,11 @@ type RequestLine struct {
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
 		state: rqStateInitialized,
+		Headers: headers.NewHeaders(),
 	}
 	readToIndex := 0
 	buf := make([]byte, bufferSize, bufferSize)
-	for request.state != rqStateDone{
+	for request.state != rqStateDone {
 		if readToIndex >= len(buf) {
 			newBuf := make([]byte, 2*len(buf))
 			copy(newBuf, buf)
