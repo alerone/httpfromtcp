@@ -56,6 +56,11 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	return crlIdx + 2, false, nil
 }
 
+func (h Headers) Get(key string) (string, bool) {
+	val, ok := h[strings.ToLower(key)]
+	return val, ok
+}
+
 func checkFieldName(fn string) bool {
 	allowed := "!#$%&'*+-.^_`|~"
 

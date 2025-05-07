@@ -33,6 +33,14 @@ func main() {
 		fmt.Printf("- Method: %s\n", rq.RequestLine.Method)
 		fmt.Printf("- Target: %s\n", rq.RequestLine.RequestTarget)
 		fmt.Printf("- Version: %s\n", rq.RequestLine.HttpVersion)
+
+		fmt.Println("Headers:")
+		for key, val := range rq.Headers {
+			fmt.Printf("- %s: %s\n", key, val)
+		}
+
+		fmt.Println("Body:")
+		fmt.Println(string(rq.Body))
 		fmt.Println("Connection closed")
 	}
 }

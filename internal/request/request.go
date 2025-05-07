@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -14,8 +15,10 @@ import (
 const (
 	rqStateInitialized requestState = iota
 	rqStateParsingHeaders
+	rqStateParsingBody
 	rqStateDone
 	bufferSize int = 8
+	crlf           = "\r\n"
 )
 
 type requestState int
@@ -23,6 +26,7 @@ type requestState int
 type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
+	Body        []byte
 	state       requestState
 }
 
@@ -46,29 +50,50 @@ func (r *Request) parse(data []byte) (n int, err error) {
 
 func (r *Request) parseSingle(data []byte) (n int, err error) {
 	switch r.state {
-	case rqStateInitialized:{
-		n, rl, err := parseRequestLine(data)
-		if err != nil {
-			return 0, err
-		}
-		if n == 0 {
-			return 0, nil
-		}
+	case rqStateInitialized:
+		{
+			n, rl, err := parseRequestLine(data)
+			if err != nil {
+				return 0, err
+			}
+			if n == 0 {
+				return 0, nil
+			}
 
-		r.RequestLine = *rl
-		r.state = rqStateParsingHeaders
-		return n, nil
-	}
-	case rqStateParsingHeaders:{
-		n, done, err := r.Headers.Parse(data)
-		if err != nil {
-			return 0, err
+			r.RequestLine = *rl
+			r.state = rqStateParsingHeaders
+			return n, nil
 		}
-		if done {
-			r.state = rqStateDone
+	case rqStateParsingHeaders:
+		{
+			n, done, err := r.Headers.Parse(data)
+			if err != nil {
+				return 0, err
+			}
+			if done {
+				r.state = rqStateParsingBody
+			}
+			return n, nil
 		}
-		return n, nil
-	}
+	case rqStateParsingBody:
+		{
+			cl, ok := r.Headers.Get("Content-Length")
+			if !ok {
+				r.state = rqStateDone
+				return 0, nil
+			}
+			r.Body = append(r.Body, data...)
+			clNum, err := strconv.Atoi(cl)
+			if err != nil {
+				return 0, fmt.Errorf("invalid content length not an integer: %s", cl)
+			}
+			if len(r.Body) > clNum {
+				return 0, fmt.Errorf("body length greater than content length")
+			} else if len(r.Body) == clNum {
+				r.state = rqStateDone
+			}
+			return len(data), nil
+		}
 	case rqStateDone:
 		return -1, fmt.Errorf("error: trying to parse data in done state")
 	default:
@@ -84,8 +109,9 @@ type RequestLine struct {
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
-		state: rqStateInitialized,
+		state:   rqStateInitialized,
 		Headers: headers.NewHeaders(),
+		Body: []byte(""),
 	}
 	readToIndex := 0
 	buf := make([]byte, bufferSize, bufferSize)
@@ -118,7 +144,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 }
 
 func parseRequestLine(data []byte) (n int, res *RequestLine, err error) {
-	idx := bytes.Index(data, []byte("\r\n"))
+	idx := bytes.Index(data, []byte(crlf))
 	if idx == -1 {
 		return 0, nil, nil
 	}
