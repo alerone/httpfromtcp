@@ -2,10 +2,13 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"sync/atomic"
 
 	"github.com/alerone/httpfromtcp/internal/request"
+	"github.com/alerone/httpfromtcp/internal/response"
 )
 
 type Server struct {
@@ -52,7 +55,7 @@ func (s *Server) listen() {
 	}
 	conn, err := s.listener.Accept()
 	if err != nil {
-		// fmt.Println(err.Error())
+		//fmt.Println(err.Error())
 		return
 	}
 	go s.handle(conn)
@@ -66,10 +69,17 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 
-	res := `HTTP/1.1 200 OK
-	Content-Type: text/plain
+	response.WriteStatusLine(conn, 200)
+	hdrs := response.GetDefaultHeaders(0)
+	err = response.WriteHeaders(conn, hdrs)
+	if err != nil {
+		log.Println(err.Error())
+	}
 
-	Hello World!
-	`
-	conn.Write([]byte(res))
+	response.WriteStatusLine(os.Stdout, 200)
+	hdrs = response.GetDefaultHeaders(0)
+	err = response.WriteHeaders(os.Stdout, hdrs)
+	if err != nil {
+		log.Println(err.Error())
+	}
 }
