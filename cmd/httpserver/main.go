@@ -1,9 +1,14 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/alerone/httpfromtcp/internal/headers"
@@ -28,61 +33,112 @@ func main() {
 	<-sigChan
 	log.Println("Server gracefully stopped")
 }
+
+var routes = map[string]server.Handler{
+	"/myproblem":   myProblemRoute,
+	"/yourproblem": yourProblemRoute,
+	"/httpbin":     httpbinRoute,
+}
+
 func routeServing(w *response.Writer, r *request.Request) {
-	switch r.RequestLine.RequestTarget {
-	case "/yourproblem":
-		{
-			w.WriteStatusLine(400)
-			hdrs := headers.NewHeaders()
-			hdrs.Set("Content-Type", "text/html")
-
-			bdy := `<html>
-  <head>
-    <title>400 Bad Request</title>
-  </head>
-  <body>
-    <h1>Bad Request</h1>
-    <p>Your request honestly kinda sucked.</p>
-  </body>
-</html>`
-			w.WriteHeaders(hdrs)
-			w.WriteBody([]byte(bdy))
+	for route, handler := range routes {
+		if strings.HasPrefix(r.RequestLine.RequestTarget, route) {
+			handler(w, r)
+			return
 		}
-	case "/myproblem":
-		{
-			w.WriteStatusLine(500)
-			hdrs := headers.NewHeaders()
-			hdrs.Set("Content-Type", "text/html")
+	}
+	w.WriteStatusLine(500)
+	hdrs := headers.NewHeaders()
+	hdrs.Set("Content-Type", "text/html")
+	bdy := `<html>
+			  <head>
+				<title>200 OK</title>
+			  </head>
+			  <body>
+				<h1>Success!</h1>
+				<p>Your request was an absolute banger.</p>
+			  </body>
+	        </html>`
+	w.WriteHeaders(hdrs)
+	w.WriteBody([]byte(bdy))
+}
 
-			bdy := `<html>
-  <head>
-    <title>500 Internal Server Error</title>
-  </head>
-  <body>
-    <h1>Internal Server Error</h1>
-    <p>Okay, you know what? This one is on me.</p>
-  </body>
-</html>`
-			w.WriteHeaders(hdrs)
-			w.WriteBody([]byte(bdy))
-		}
-	default:
-		w.WriteStatusLine(500)
+func httpbinRoute(w *response.Writer, r *request.Request) {
+	path := strings.TrimPrefix(r.RequestLine.RequestTarget, "/httpbin")
+	url := "https://httpbin.org" + path
+	res, err := http.Get(url)
+	if err != nil {
+		w.WriteStatusLine(400)
 		hdrs := headers.NewHeaders()
 		hdrs.Set("Content-Type", "text/html")
 		bdy := `<html>
-  <head>
-    <title>200 OK</title>
-  </head>
-  <body>
-    <h1>Success!</h1>
-    <p>Your request was an absolute banger.</p>
-  </body>
-</html>`
-
+			  <head>
+				<title>400 Bad request</title>
+			  </head>
+			  <body>
+				<h1>Not found on httpbin.org</h1>
+			  </body>
+	        </html>`
 		w.WriteHeaders(hdrs)
 		w.WriteBody([]byte(bdy))
+		return
+	}
+	buf := make([]byte, 1024)
+	w.WriteStatusLine(response.OkStatus)
+	hdrs := headers.NewHeaders()
+	hdrs.Set("Transfer-Encoding", "chunked")
+	hdrs.Set("Host", "httpbin.org")
+	w.WriteHeaders(hdrs)
+	for {
+		n, err := res.Body.Read(buf)
+		if err != nil {
+			if errors.Is(err, io.EOF){
+				w.WriteChunkedBodyDone()
+				return
+			} 
+			fmt.Println(err.Error())
+			return
+		}
 
+		fmt.Println("Read: ", n)
+
+
+		w.WriteChunkedBody(buf)
 	}
 
+}
+
+func yourProblemRoute(w *response.Writer, r *request.Request) {
+	w.WriteStatusLine(400)
+	hdrs := headers.NewHeaders()
+	hdrs.Set("Content-Type", "text/html")
+
+	bdy := `<html>
+	<head>
+	<title>400 Bad Request</title>
+	</head>
+	<body>
+	<h1>Bad Request</h1>
+	<p>Your request honestly kinda sucked.</p>
+	</body>
+	</html>`
+	w.WriteHeaders(hdrs)
+	w.WriteBody([]byte(bdy))
+}
+func myProblemRoute(w *response.Writer, r *request.Request) {
+	w.WriteStatusLine(500)
+	hdrs := headers.NewHeaders()
+	hdrs.Set("Content-Type", "text/html")
+
+	bdy := `<html>
+	<head>
+	<title>500 Internal Server Error</title>
+	</head>
+	<body>
+	<h1>Internal Server Error</h1>
+	<p>Okay, you know what? This one is on me.</p>
+	</body>
+	</html>`
+	w.WriteHeaders(hdrs)
+	w.WriteBody([]byte(bdy))
 }
