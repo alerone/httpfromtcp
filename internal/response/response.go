@@ -11,9 +11,9 @@ import (
 type StatusCode int
 
 const (
-	okStatus                  StatusCode = 200
-	badRequestStatus          StatusCode = 400
-	internalServerErrorStatus StatusCode = 500
+	OkStatus                  StatusCode = 200
+	BadRequestStatus          StatusCode = 400
+	InternalServerErrorStatus StatusCode = 500
 )
 
 const(
@@ -23,21 +23,21 @@ const(
 )
 
 var codeReasons = map[StatusCode]string{
-	okStatus:                  "OK",
-	badRequestStatus:          "Bad Request",
-	internalServerErrorStatus: "Internal Server Error",
+	OkStatus:                  "OK",
+	BadRequestStatus:          "Bad Request",
+	InternalServerErrorStatus: "Internal Server Error",
 }
 
 
 func WriteStatusLine(w io.Writer, statusCode StatusCode) {
 	reason, ok := codeReasons[statusCode]
 	if !ok {
-		response := fmt.Appendf(nil, "HTTP/1.1 %d\n", statusCode)
+		response := fmt.Appendf(nil, "HTTP/1.1 %d\r\n", statusCode)
 		w.Write(response)
 		return
 	}
 
-	response := fmt.Appendf(nil, "HTTP/1.1 %d %s\n", statusCode, reason)
+	response := fmt.Appendf(nil, "HTTP/1.1 %d %s\r\n", statusCode, reason)
 	w.Write(response)
 	return
 }
@@ -45,32 +45,32 @@ func WriteStatusLine(w io.Writer, statusCode StatusCode) {
 func WriteHeaders (w io.Writer, headers headers.Headers) error {
 	val, ok := headers.Get(defaultCntLen)
 	if !ok {
-		return fmt.Errorf("error while getting default header: %s\n", defaultCntLen)
+		return fmt.Errorf("error while getting default header: %s\r\n", defaultCntLen)
 	}
-	_, err := w.Write(fmt.Appendf(nil, "%s: %s\n", defaultCntLen, val))
+	_, err := w.Write(fmt.Appendf(nil, "%s: %s\r\n", defaultCntLen, val))
 	if err != nil {
-		return fmt.Errorf("writing header error: %s\n", err.Error())
+		return fmt.Errorf("writing header error: %s\r\n", err.Error())
 	}
 	
 
 	val, ok = headers.Get(defaultConn)
 	if !ok {
-		return fmt.Errorf("error while getting default header: %s\n", defaultConn)
+		return fmt.Errorf("error while getting default header: %s\r\n", defaultConn)
 	}
 	_, err = w.Write(fmt.Appendf(nil, "%s: %s\n", defaultConn, val))
 
 	if err != nil {
-		return fmt.Errorf("writing header error: %s\n", err.Error())
+		return fmt.Errorf("writing header error: %s\r\n", err.Error())
 	}
 
 	val, ok = headers.Get(defaultCntType)
 	if !ok {
-		return fmt.Errorf("error while getting default header: %s\n", defaultCntType)
+		return fmt.Errorf("error while getting default header: %s\r\n", defaultCntType)
 	}
-	_, err = w.Write(fmt.Appendf(nil, "%s: %s\n", defaultCntType, val))
+	_, err = w.Write(fmt.Appendf(nil, "%s: %s\r\n\r\n", defaultCntType, val))
 
 	if err != nil {
-		return fmt.Errorf("writing header error: %s\n", err.Error())
+		return fmt.Errorf("writing header error: %s\r\n", err.Error())
 	}
 
 	return nil

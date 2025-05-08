@@ -1,10 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"sync/atomic"
 
 	"github.com/alerone/httpfromtcp/internal/request"
@@ -12,35 +12,29 @@ import (
 )
 
 type Server struct {
-	State    *atomic.Bool
+	closed   *atomic.Bool
 	listener net.Listener
+	handler  Handler
 }
 
-func Serve(port int) (*Server, error) {
+func Serve(port int, handler Handler) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("starting http server error: %s", err.Error())
 	}
 
-	var state atomic.Bool
-	state.Store(true)
-
 	server := &Server{
-		State:    &state,
+		handler:  handler,
 		listener: listener,
 	}
 
-	go func() {
-		for {
-			server.listen()
-		}
-	}()
+	go server.listen(handler)
 
 	return server, nil
 }
 
 func (s *Server) Close() error {
-	s.State.Store(false)
+	s.closed.Store(true)
 	err := s.listener.Close()
 	if err != nil {
 		return fmt.Errorf("closing server error: %s", err.Error())
@@ -49,37 +43,42 @@ func (s *Server) Close() error {
 	return nil
 }
 
-func (s *Server) listen() {
-	if s.State.Load() == false {
-		return
+func (s *Server) listen(handler Handler) {
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			if s.closed.Load() {
+				return
+			}
+			log.Printf("Error accepting connection: %v", err)
+			continue
+		}
+		go s.handle(conn)
 	}
-	conn, err := s.listener.Accept()
-	if err != nil {
-		//fmt.Println(err.Error())
-		return
-	}
-	go s.handle(conn)
 }
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
-	_, err := request.RequestFromReader(conn)
+	rq, err := request.RequestFromReader(conn)
 	if err != nil {
 		fmt.Println(err.Error())
+		errorMsg := fmt.Sprintf("HTTP/1.1 400 Bad Request\r\nContent-Length: %d\r\n\r\n%s", len(err.Error()), err.Error())
+		conn.Write([]byte(errorMsg))
 		return
 	}
 
-	response.WriteStatusLine(conn, 200)
-	hdrs := response.GetDefaultHeaders(0)
+	buf := new(bytes.Buffer)
+	hErr := s.handler(buf, rq)
+	if hErr != nil {
+		hErr.Write(conn)
+		return
+	}
+
+	response.WriteStatusLine(conn, response.OkStatus)
+	hdrs := response.GetDefaultHeaders(buf.Len())
 	err = response.WriteHeaders(conn, hdrs)
 	if err != nil {
 		log.Println(err.Error())
 	}
-
-	response.WriteStatusLine(os.Stdout, 200)
-	hdrs = response.GetDefaultHeaders(0)
-	err = response.WriteHeaders(os.Stdout, hdrs)
-	if err != nil {
-		log.Println(err.Error())
-	}
+	buf.WriteTo(conn)
 }
