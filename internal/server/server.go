@@ -28,7 +28,7 @@ func Serve(port int, handler Handler) (*Server, error) {
 		listener: listener,
 	}
 
-	go server.listen(handler)
+	go server.listen()
 
 	return server, nil
 }
@@ -43,7 +43,7 @@ func (s *Server) Close() error {
 	return nil
 }
 
-func (s *Server) listen(handler Handler) {
+func (s *Server) listen() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -68,17 +68,7 @@ func (s *Server) handle(conn net.Conn) {
 	}
 
 	buf := new(bytes.Buffer)
-	hErr := s.handler(buf, rq)
-	if hErr != nil {
-		hErr.Write(conn)
-		return
-	}
-
-	response.WriteStatusLine(conn, response.OkStatus)
-	hdrs := response.GetDefaultHeaders(buf.Len())
-	err = response.WriteHeaders(conn, hdrs)
-	if err != nil {
-		log.Println(err.Error())
-	}
+	writer := response.NewWriter(buf)
+	s.handler(&writer, rq)
 	buf.WriteTo(conn)
 }

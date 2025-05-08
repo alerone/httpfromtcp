@@ -60,6 +60,9 @@ func (h Headers) Get(key string) (string, bool) {
 	val, ok := h[strings.ToLower(key)]
 	return val, ok
 }
+func (h Headers) Set(key, val string) {
+	h[strings.ToLower(key)] = val
+}
 
 func checkFieldName(fn string) bool {
 	allowed := "!#$%&'*+-.^_`|~"
