@@ -97,7 +97,7 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 	w.state = writingBody
 	w.body = p
 	w.out.Write(p)
-	return len(p), nil
+	return len(p)+2, nil
 }
 
 func (w *Writer) WriteChunkedBody(p []byte) (int, error) {

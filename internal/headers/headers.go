@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Headers map[string]string
@@ -57,12 +60,19 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 }
 
 func (h Headers) Get(key string) (string, bool) {
-	val, ok := h[strings.ToLower(key)]
+	caser := cases.Title(language.English)
+	val, ok := h[caser.String(key)]
 	return val, ok
 }
 func (h Headers) Set(key, val string) {
-	h[strings.ToLower(key)] = val
+	caser := cases.Title(language.English)
+	h[caser.String(key)] = val
 }
+func (h Headers) Remove(key string) {
+	caser := cases.Title(language.English)
+	delete(h, caser.String(key))
+}
+
 
 func checkFieldName(fn string) bool {
 	allowed := "!#$%&'*+-.^_`|~"
