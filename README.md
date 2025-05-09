@@ -1,9 +1,20 @@
+<div align="center">
+
 # HTTP/1.1 made in golang
-![GitHub top language](https://img.shields.io/github/languages/top/alerone/httpfromtcp?color=%2377CDFF) ![GitHub last commit](https://img.shields.io/github/last-commit/alerone/httpfromtcp?color=%23bc0bbf) ![GitHub Created At](https://img.shields.io/github/created-at/alerone/httpfromtcp?color=%230dba69) ![GitHub repo size](https://img.shields.io/github/repo-size/alerone/httpfromtcp?color=%23390385)
 
-This project is an implementation of the HyperText Transfer Protocol version 1.1 in golang. This is a project made step by step from a tutorial on boot.dev.
+![GitHub top language](https://img.shields.io/github/languages/top/alerone/httpfromtcp?color=%2377CDFF)
+![GitHub last commit](https://img.shields.io/github/last-commit/alerone/httpfromtcp?color=%23bc0bbf)
+![GitHub Created At](https://img.shields.io/github/created-at/alerone/httpfromtcp?color=%230dba69)
+![GitHub repo size](https://img.shields.io/github/repo-size/alerone/httpfromtcp?color=%23390385)
 
----
+<br>
+
+<img src="https://github.com/user-attachments/assets/1bc11981-5738-4a70-aa24-2a9a6eea563a" alt="golang y http" width="250" height="250"/>
+
+</div>
+
+This project is an implementation of the HyperText Transfer Protocol version 1.1 in golang, made following the course from ![boot.dev](https://www.boot.dev/courses/learn-http-protocol-golang)
+
 
 ## Features
 
@@ -16,7 +27,6 @@ This is a project only for learning purposes.
 - Basic Connections (not keep-alive)
 - Transfer chunked encoding
 
----
 
 ## Project Structure
 
@@ -35,6 +45,7 @@ This is a project only for learning purposes.
 ├── go.sum
 ├── internal
 │   ├── headers
+
 │   │   ├── headers.go
 │   │   └── headers_test.go
 │   ├── request
@@ -50,13 +61,9 @@ This is a project only for learning purposes.
 └── README.md
 ```
 
----
-
 ## Requirements
 
 - [Go](https://golang.org/dl/)  installed (version 1.18+)
-
----
 
 ## Start
 
@@ -67,8 +74,6 @@ go run ./cmd/httpserver/
 ```
 
 The server will listen on port `:42069`.
-
----
 
 ## Usage
 
@@ -105,5 +110,3 @@ type Handler func(w *response.Writer, req *request.Request)
 The response.Writer lets the user manage the response Status Line (status code), the Headers, the Body, an optional
 Chunked Body and optional Trailers for this optional Chunked Body.
 
-
----
