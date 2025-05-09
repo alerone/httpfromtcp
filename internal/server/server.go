@@ -12,7 +12,7 @@ import (
 )
 
 type Server struct {
-	closed   *atomic.Bool
+	closed   atomic.Bool
 	listener net.Listener
 	handler  Handler
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/alerone/httpfromtcp/internal/headers"
 )
@@ -29,6 +30,8 @@ const (
 	writingStatus
 	writingHdrs
 	writingBody
+	writingChunkedBody
+	writingTrailers
 )
 
 var codeReasons = map[StatusCode]string{
@@ -40,6 +43,7 @@ var codeReasons = map[StatusCode]string{
 type Writer struct {
 	statusCode StatusCode
 	Headers    headers.Headers
+	trailers   headers.Headers
 	body       []byte
 	out        io.Writer
 	state      writerState
@@ -76,6 +80,12 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	w.Headers = headers
 	for key, val := range headers {
 		w.out.Write(fmt.Appendf(nil, "%s: %s\r\n", key, val))
+		if key == "Trailer" {
+			trailers := strings.SplitSeq(val, ",")
+			for trailer := range trailers {
+				w.trailers.Set(strings.TrimSpace(trailer), "")
+			}
+		}
 	}
 
 	return nil
@@ -97,11 +107,11 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 	w.state = writingBody
 	w.body = p
 	w.out.Write(p)
-	return len(p)+2, nil
+	return len(p) + 2, nil
 }
 
 func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
-	if w.state != writingBody {
+	if w.state != writingChunkedBody {
 		if w.state != writingHdrs {
 			return 0, &InvalidOrderResponseWriter{
 				expectedState: writingHdrs,
@@ -110,7 +120,7 @@ func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
 		}
 		w.out.Write([]byte("\r\n"))
 	}
-	w.state = writingBody
+	w.state = writingChunkedBody
 
 	encoding := fmt.Appendf(nil, "%X\r\n%s\r\n", len(p), string(p))
 	w.out.Write(encoding)
@@ -128,6 +138,24 @@ func (w *Writer) WriteChunkedBodyDone() (int, error) {
 	w.out.Write(encoding)
 
 	return len(encoding), nil
+}
+
+func (w *Writer) WriteTrailers(h headers.Headers) error {
+	if w.state != writingChunkedBody {
+		return &InvalidOrderResponseWriter{
+			expectedState: writingChunkedBody,
+			actual:        w.state,
+		}
+	}
+	w.state = writingTrailers
+	w.out.Write(fmt.Append(nil, "0\r\n"))
+	for key, val := range h {
+		w.out.Write(fmt.Appendf(nil, "%s: %s\r\n", key, val))
+	}
+	w.out.Write(fmt.Append(nil, "\r\n"))
+
+	return nil
+
 }
 
 func writeStatusLine(w io.Writer, statusCode StatusCode) {
@@ -160,11 +188,15 @@ func (ws *writerState) String() string {
 	case initState:
 		out.WriteString("not writing")
 	case writingStatus:
-		out.WriteString("writing status line")
+		out.WriteString("just wrote status line")
 	case writingHdrs:
-		out.WriteString("writing headers")
+		out.WriteString("just wrote headers")
 	case writingBody:
-		out.WriteString("writing body")
+		out.WriteString("just wrote body")
+	case writingChunkedBody:
+		out.WriteString("just wrote chunked body")
+	case writingTrailers:
+		out.WriteString("just wrote trailers")
 	default:
 		out.WriteString("error order unknown")
 	}

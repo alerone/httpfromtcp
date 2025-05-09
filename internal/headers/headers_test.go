@@ -57,7 +57,7 @@ func TestValidTwoHeadersWithExistingHeaders(t *testing.T) {
 
 func TestValidTwoEqualValidHeaders(t *testing.T) {
 	headers := NewHeaders()
-	headerStrings := []string {
+	headerStrings := []string{
 		"Set-Person: lane-loves-go",
 		"Set-Person: prime-loves-zig",
 		"Set-Person: tj-loves-ocaml",
@@ -97,4 +97,24 @@ func TestValidTwoEqualValidHeaders(t *testing.T) {
 	assert.False(t, done)
 }
 
+func TestSetHeaders(t *testing.T) {
+	hdrs := NewHeaders()
+	hdrs.Set("Authorization", "nothing")
+	auth, ok := hdrs.Get("Authorization")
+	require.True(t, ok)
+	require.NotNil(t, auth)
+	assert.Equal(t, "nothing", auth)
 
+	hdrs.Set("Authorization", "otra cosa")
+	auth, ok = hdrs.Get("Authorization")
+	require.True(t, ok)
+	require.NotNil(t, auth)
+	assert.Equal(t,"otra cosa", auth)
+
+	hdrs.Set("Authorization", "primera cosa", "segunda cosa")
+	auth, ok = hdrs.Get("Authorization")
+	require.True(t, ok)
+	require.NotNil(t, auth)
+	assert.Equal(t, "primera cosa, segunda cosa", auth)
+
+}

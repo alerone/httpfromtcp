@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -8,9 +10,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
+	"github.com/alerone/httpfromtcp/internal/headers"
 	"github.com/alerone/httpfromtcp/internal/request"
 	"github.com/alerone/httpfromtcp/internal/response"
 	"github.com/alerone/httpfromtcp/internal/server"
@@ -88,23 +92,35 @@ func httpbinRoute(w *response.Writer, r *request.Request) {
 	w.WriteStatusLine(response.OkStatus)
 	hdrs := response.GetDefaultHeaders(0)
 	hdrs.Remove("content-length")
+	hdrs.Set("Trailers", "X-Content-SHA256", "X-Content-Length")
 	hdrs.Set("Transfer-Encoding", "chunked")
 	hdrs.Set("Host", "httpbin.org")
 	w.WriteHeaders(hdrs)
+	var readBuf bytes.Buffer
 	for {
 		n, err := res.Body.Read(buf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				w.WriteChunkedBodyDone()
+				trailers := headers.NewHeaders()
+				sum := sha256.Sum256(readBuf.Bytes())
+				trailers.Set("X-Content-SHA256", fmt.Sprintf("%x", sum))
+				trailers.Set("X-Content-Length", strconv.Itoa(readBuf.Len()))
+				err = w.WriteTrailers(trailers)
+				if err != nil {
+					fmt.Println(err)
+				}
 				return
 			}
 			fmt.Println(err.Error())
 			return
 		}
-
 		fmt.Println("Read: ", n)
 
-		w.WriteChunkedBody(buf)
+		readBuf.Write(buf)
+		_, err = w.WriteChunkedBody(buf)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
 }

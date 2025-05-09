@@ -64,9 +64,16 @@ func (h Headers) Get(key string) (string, bool) {
 	val, ok := h[caser.String(key)]
 	return val, ok
 }
-func (h Headers) Set(key, val string) {
+func (h Headers) Set(key string, values... string) {
 	caser := cases.Title(language.English)
-	h[caser.String(key)] = val
+	cleanKey := caser.String(key)
+	fmt.Println(len(values))
+	h[cleanKey] = values[0]
+	if len(values) > 1 {
+		for _, val := range values[1:] {
+			h[cleanKey] = fmt.Sprintf("%s, %s", h[cleanKey], val) 
+		}
+	}
 }
 func (h Headers) Remove(key string) {
 	caser := cases.Title(language.English)
