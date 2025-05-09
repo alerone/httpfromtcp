@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 
 	"github.com/alerone/httpfromtcp/internal/headers"
 )
@@ -43,7 +42,6 @@ var codeReasons = map[StatusCode]string{
 type Writer struct {
 	statusCode StatusCode
 	Headers    headers.Headers
-	trailers   headers.Headers
 	body       []byte
 	out        io.Writer
 	state      writerState
@@ -80,12 +78,6 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	w.Headers = headers
 	for key, val := range headers {
 		w.out.Write(fmt.Appendf(nil, "%s: %s\r\n", key, val))
-		if key == "Trailer" {
-			trailers := strings.SplitSeq(val, ",")
-			for trailer := range trailers {
-				w.trailers.Set(strings.TrimSpace(trailer), "")
-			}
-		}
 	}
 
 	return nil

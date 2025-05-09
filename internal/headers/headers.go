@@ -67,7 +67,6 @@ func (h Headers) Get(key string) (string, bool) {
 func (h Headers) Set(key string, values... string) {
 	caser := cases.Title(language.English)
 	cleanKey := caser.String(key)
-	fmt.Println(len(values))
 	h[cleanKey] = values[0]
 	if len(values) > 1 {
 		for _, val := range values[1:] {

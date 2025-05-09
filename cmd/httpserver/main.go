@@ -41,6 +41,7 @@ var routes = map[string]server.Handler{
 	"/myproblem":   myProblemRoute,
 	"/yourproblem": yourProblemRoute,
 	"/httpbin":     httpbinRoute,
+	"/video":     videoRoute,
 }
 
 func routeServing(w *response.Writer, r *request.Request) {
@@ -123,6 +124,33 @@ func httpbinRoute(w *response.Writer, r *request.Request) {
 		}
 	}
 
+}
+
+func videoRoute(w *response.Writer, r *request.Request) {
+	video, err := os.ReadFile("./assets/vim.mp4")
+	if err != nil {
+		w.WriteStatusLine(500)
+		hdrs := response.GetDefaultHeaders(0)
+		w.WriteHeaders(hdrs)
+		w.WriteBody([]byte(""))
+		return
+	}
+
+	hdrs := response.GetDefaultHeaders(len(video))	
+	hdrs.Set("Content-Type", "video/mp4")
+	err = w.WriteStatusLine(200)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = w.WriteHeaders(hdrs)
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = w.WriteBody(video)
+	if err != nil {
+		fmt.Println(err)
+	}
+	
 }
 
 func yourProblemRoute(w *response.Writer, r *request.Request) {
