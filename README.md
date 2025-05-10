@@ -45,7 +45,6 @@ This is a project only for learning purposes.
 ├── go.sum
 ├── internal
 │   ├── headers
-
 │   │   ├── headers.go
 │   │   └── headers_test.go
 │   ├── request
@@ -64,6 +63,10 @@ This is a project only for learning purposes.
 ## Requirements
 
 - [Go](https://golang.org/dl/)  installed (version 1.18+)
+To install the dependencies for the project you must write on terminal the following line from the root of the project:
+```bash
+go mod tidy
+```
 
 ## Start
 
